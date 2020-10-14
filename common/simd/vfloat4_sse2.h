@@ -161,7 +161,11 @@ namespace embree
     static __forceinline void store_nt(void* ptr, const vfloat4& v)
     {
 #if defined (__SSE4_1__)
+#if defined(__aarch64__)
+      _mm_stream_ps((float*)ptr,vreinterpretq_s32_f32(v.v));
+#else
       _mm_stream_ps((float*)ptr,v);
+#endif
 #else
       _mm_store_ps((float*)ptr,v);
 #endif
@@ -491,8 +495,13 @@ namespace embree
   __forceinline vboolf4 operator ==(const vfloat4& a, const vfloat4& b) { return _mm_cmpeq_ps (a, b); }
   __forceinline vboolf4 operator !=(const vfloat4& a, const vfloat4& b) { return _mm_cmpneq_ps(a, b); }
   __forceinline vboolf4 operator < (const vfloat4& a, const vfloat4& b) { return _mm_cmplt_ps (a, b); }
+#if defined(__aarch64__)
   __forceinline vboolf4 operator >=(const vfloat4& a, const vfloat4& b) { return _mm_cmpge_ps (a, b); }
   __forceinline vboolf4 operator > (const vfloat4& a, const vfloat4& b) { return _mm_cmpgt_ps (a, b); }
+#else
+  __forceinline vboolf4 operator >=(const vfloat4& a, const vfloat4& b) { return _mm_cmpnlt_ps(a, b); }
+  __forceinline vboolf4 operator > (const vfloat4& a, const vfloat4& b) { return _mm_cmpnle_ps(a, b); }
+#endif
   __forceinline vboolf4 operator <=(const vfloat4& a, const vfloat4& b) { return _mm_cmple_ps (a, b); }
 #endif
 

@@ -2,13 +2,23 @@
 ## SPDX-License-Identifier: Apache-2.0
 
 SET(EMBREE_VERSION_MAJOR 3)
-SET(EMBREE_VERSION_MINOR 11)
+SET(EMBREE_VERSION_MINOR 12)
 SET(EMBREE_VERSION_PATCH 0)
 SET(EMBREE_VERSION_NOTE "")
 
 SET(EMBREE_VERSION ${EMBREE_VERSION_MAJOR}.${EMBREE_VERSION_MINOR}.${EMBREE_VERSION_PATCH})
 MATH(EXPR EMBREE_VERSION_NUMBER "10000*${EMBREE_VERSION_MAJOR} + 100*${EMBREE_VERSION_MINOR} + ${EMBREE_VERSION_PATCH}")
 SET(CPACK_RPM_PACKAGE_RELEASE 1)
+
+# https://stackoverflow.com/questions/42716466/how-can-i-tell-within-a-cmakelists-txt-whether-its-used-with-add-subdirectory
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  # I am top-level project.
+  SET(EMBREE_AS_SUBMODULE Off)
+else()
+  # I am called from other project with add_subdirectory().
+  MESSAGE(STATUS "Build Embree as submodule") 
+  SET(EMBREE_AS_SUBMODULE On)
+endif()
 
 PROJECT(embree${EMBREE_VERSION_MAJOR})
 
@@ -85,6 +95,13 @@ SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/common/cmake ${CMAKE_MODULE_PA
 IF (BUILD_TESTING)
   INCLUDE(test)
 ENDIF()
+
+set(BUILD_DOC OFF CACHE INTERNAL "build documentation (internal only)")
+IF (BUILD_DOC)
+  ADD_SUBDIRECTORY(doc)
+ENDIF()
+
+OPTION(EMBREE_TUTORIALS    "Enable to build Embree tutorials" ON)
 
 ##############################################################
 # Embree configuration
@@ -193,7 +210,7 @@ endif(EMBREE_USE_CCACHE)
 # Mobile Support (support arm64 / aarch64 on Android and iOS)
 ##############################################################
 
-OPTION(EMBREE_USE_EMBEDDED_TBB "Build TBB from source(using third_party/tbb submodule." OFF)
+OPTION(EMBREE_USE_EMBEDDED_TBB "Build TBB from source(please download and extract it to third_party/tbb." OFF)
 
 # We forward-assign these variables for sanity and ease of debugging the build system.
 # They are not directly being used.
@@ -612,18 +629,26 @@ ENDIF()
 # Uninstall
 ##############################################################
 
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/cmake/uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake"
-    IMMEDIATE @ONLY)
+IF (NOT EMBREE_AS_SUBMODULE)
 
-add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake)
+  configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/common/cmake/uninstall.cmake.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake"
+      IMMEDIATE @ONLY)
+  
+  add_custom_target(uninstall
+      COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake)
+  
+  SET_PROPERTY(TARGET uninstall PROPERTY FOLDER CMakePredefinedTargets)
 
-SET_PROPERTY(TARGET uninstall PROPERTY FOLDER CMakePredefinedTargets)
+ENDIF ()
 
 ##############################################################
 # Has to be last
 ##############################################################
 
-INCLUDE(CPack)
+IF (NOT EMBREE_AS_SUBMODULE)
+
+  INCLUDE(CPack)
+
+ENDIF ()
